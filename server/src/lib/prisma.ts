@@ -5,9 +5,12 @@ import { env } from "../config/env.js";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Initialize PostgreSQL connection pool
+// Initialize PostgreSQL connection pool with connection timeout & pool settings
 const pool = new pg.Pool({
   connectionString: env.DATABASE_URL,
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
 });
 
 // Configure Prisma Postgres driver adapter
@@ -24,4 +27,3 @@ export const prisma =
 if (env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
-

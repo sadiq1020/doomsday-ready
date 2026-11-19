@@ -18,6 +18,12 @@ const movieSelect = {
   },
 } as const;
 
+// Default transaction options to handle cloud database network latency (e.g. Neon)
+const TX_OPTIONS = {
+  maxWait: 10000, // 10 seconds to acquire connection
+  timeout: 20000, // 20 seconds for transaction execution
+} as const;
+
 /**
  * Creates one movie or a batch of movies.
  */
@@ -92,7 +98,7 @@ export async function createMovies(input: CreateMovieInput | CreateMovieInput[])
       }
 
       return createdMovies;
-    });
+    }, TX_OPTIONS);
   }
 
   // Case B: Single movie creation
@@ -207,7 +213,7 @@ export async function updateMovie(id: string, input: UpdateMovieInput) {
         });
         if (found.length !== uniquePrereqs.length) {
           const foundIds = new Set(found.map((m) => m.id));
-          const missing = uniquePrereqs.filter((pid) => !foundSet(pid, foundIds));
+          const missing = uniquePrereqs.filter((pid) => !foundIds.has(pid));
           throw new AppError(
             400,
             "INVALID_PREREQUISITE",
@@ -263,11 +269,7 @@ export async function updateMovie(id: string, input: UpdateMovieInput) {
     });
 
     return updated;
-  });
-}
-
-function foundSet(id: string, set: Set<string>): boolean {
-  return set.has(id);
+  }, TX_OPTIONS);
 }
 
 /**
@@ -345,4 +347,3 @@ export async function getMovieRewatchOrder(id: string) {
     },
   };
 }
-

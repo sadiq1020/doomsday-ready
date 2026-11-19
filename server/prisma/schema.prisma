@@ -6,3 +6,23 @@ generator client {
   provider = "prisma-client-js"
 }
 
+model Movie {
+  id            String   @id @default(uuid())
+  title         String   @unique
+  releaseYear   Int
+  runtime       Int
+  watched       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  prerequisites Movie[]  @relation("MoviePrerequisites")
+  dependents    Movie[]  @relation("MoviePrerequisites")
+}
+
+model Cinema {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  bundleSizes Int[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

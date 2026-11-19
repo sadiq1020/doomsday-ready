@@ -1,0 +1,21 @@
+# Dependencies
+node_modules
+
+# TypeScript build output
+dist
+
+# Local environment (secrets must never enter the image)
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / Editor artefacts
+.DS_Store
+Thumbs.db
+.vscode
+.idea
+

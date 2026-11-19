@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0A0F0D;
+  --color-ink-2: #101814;
+  --color-ink-3: #17221C;
+  --color-paper: #EAE3D0;
+  --color-paper-dim: #9A9783;
+  --color-brass: #C9A24B;
+  --color-brass-bright: #E8C877;
+  --color-verdigris: #4FB598;
+  --color-ember: #E4572E;
+  --color-hairline: rgba(201, 162, 75, 0.18);
+
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --font-body: var(--font-instrument), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+:root {
+  --ink: #0A0F0D;
+  --ink-2: #101814;
+  --ink-3: #17221C;
+  --paper: #EAE3D0;
+  --paper-dim: #9A9783;
+  --brass: #C9A24B;
+  --brass-bright: #E8C877;
+  --verdigris: #4FB598;
+  --ember: #E4572E;
+  --hairline: rgba(201, 162, 75, 0.18);
+}
+
+body {
+  background-color: var(--ink);
+  color: var(--paper);
+  font-family: var(--font-instrument), system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Custom dossier scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0A0F0D;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(201, 162, 75, 0.25);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(201, 162, 75, 0.5);
+}
+
+/* Accessible brass focus rings */
+*:focus-visible {
+  outline: 2px solid #C9A24B;
+  outline-offset: 2px;
+}
+
+/* Corner tick marks for classified briefing panels */
+.corner-ticks {
+  position: relative;
+}
+.corner-ticks::before,
+.corner-ticks::after {
+  content: "";
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-color: rgba(201, 162, 75, 0.45);
+  pointer-events: none;
+}
+.corner-ticks::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+.corner-ticks::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
+}
+
+/* Dossier label styling: small, uppercase, wide tracking, mono */
+.label-mono {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--paper-dim);
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

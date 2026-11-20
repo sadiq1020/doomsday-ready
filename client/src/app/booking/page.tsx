@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Plus, Building2, Ticket } from "lucide-react";
+import { useEffect, useState, useCallback } from "react";
+import { Plus, Building2 } from "lucide-react";
 import { ChapterHeader } from "@/components/chapter-header";
 import { Button } from "@/components/ui/button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
@@ -14,10 +14,10 @@ import { QuoteResult } from "@/components/booking/quote-result";
 export default function BookingPage() {
   const { data: cinemas = [], isLoading: isLoadingCinemas } = useCinemas();
   const [selectedCinemaId, setSelectedCinemaId] = useState<string | null>(null);
-  const [groupSize, setGroupSize] = useState<number>(7);
+  const [debouncedGroupSize, setDebouncedGroupSize] = useState<number>(7);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  // Auto-select first cinema once cinemas are loaded
+  // Auto-select first cinema once loaded if none is active
   useEffect(() => {
     if (!selectedCinemaId && cinemas.length > 0) {
       setSelectedCinemaId(cinemas[0].id);
@@ -26,29 +26,33 @@ export default function BookingPage() {
 
   const selectedCinema = cinemas.find((c) => c.id === selectedCinemaId) ?? null;
 
+  const handleDebouncedHeadcountChange = useCallback((value: number) => {
+    setDebouncedGroupSize(value);
+  }, []);
+
   const {
     data: quote,
     isLoading: isLoadingQuote,
     error: quoteError,
-  } = useBookingQuote(selectedCinemaId, groupSize);
+  } = useBookingQuote(selectedCinemaId, debouncedGroupSize);
 
   return (
     <div className="space-y-10">
       <ChapterHeader
         chapter="03"
         label="Opening Night"
-        title="Watch-Party Seat Allocation"
-        description="Compute optimal opening-night seat bundles across partner cinemas using dynamic programming. Ensures exact squad seating with zero ticket waste and minimal total bundles."
+        title="Opening Night"
+        description="Calculate optimal seat bundle allocations across partner cinemas to seat your squad with zero ticket waste and minimal passes."
       />
 
-      {/* Top action bar */}
+      {/* Action Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brass/15 pb-4">
         <div className="flex items-center gap-2">
           <Building2 className="w-4 h-4 text-brass" />
           <span className="label-mono">
             {isLoadingCinemas
-              ? "SCANNING VENUES..."
-              : `${cinemas.length} REGISTERED VENUE PARTNERS`}
+              ? "SEARCHING CINEMA DIRECTORY..."
+              : `${cinemas.length} REGISTERED HOST CINEMAS`}
           </span>
         </div>
 
@@ -59,31 +63,36 @@ export default function BookingPage() {
           className="inline-flex items-center gap-1.5 self-start sm:self-auto"
         >
           <Plus className="w-4 h-4 text-brass" />
-          <span>Register Venue</span>
+          <span>Add Cinema</span>
         </Button>
       </div>
 
-      {/* Venue Selection Grid */}
+      {/* Step A: Pick a Cinema */}
       <div className="space-y-3">
-        <span className="label-mono">STEP 01: SELECT HOST CINEMA</span>
+        <div className="flex items-center justify-between">
+          <span className="label-mono">STEP A: PICK A CINEMA</span>
+          <span className="text-[11px] font-mono text-paper-dim">
+            SELECT PREFERRED VENUE PARTNER
+          </span>
+        </div>
 
         {isLoadingCinemas ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="h-32 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
-            <div className="h-32 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
-            <div className="h-32 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
+            <div className="h-36 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
+            <div className="h-36 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
+            <div className="h-36 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
           </div>
         ) : cinemas.length === 0 ? (
           <SpotlightCard withTicks className="p-8 text-center space-y-3">
             <p className="font-body text-sm text-paper-dim">
-              No cinema partners currently registered in the database.
+              No cinemas currently registered in the database.
             </p>
             <Button
               variant="primary"
               size="sm"
               onClick={() => setIsDrawerOpen(true)}
             >
-              Register First Cinema
+              Add First Cinema
             </Button>
           </SpotlightCard>
         ) : (
@@ -100,35 +109,32 @@ export default function BookingPage() {
         )}
       </div>
 
-      {/* Headcount Control & Quote Results Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left Column: Headcount selector */}
+      {/* Step B & Result Panel Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left: Step B Group Size Input */}
         <div className="lg:col-span-5 space-y-3">
-          <span className="label-mono">STEP 02: SPECIFY SQUAD HEADCOUNT</span>
           <HeadcountControl
-            value={groupSize}
-            onChange={(val) => setGroupSize(val)}
+            initialValue={7}
+            onDebouncedChange={handleDebouncedHeadcountChange}
             min={1}
             max={10000}
           />
         </div>
 
-        {/* Right Column: Allocation Output */}
+        {/* Right: Allocation Result Panel */}
         <div className="lg:col-span-7 space-y-3">
-          <span className="label-mono">
-            STEP 03: DYNAMIC PROGRAMMING ALLOCATION
-          </span>
+          <span className="label-mono">OPTIMAL BUNDLE RESULT</span>
           <QuoteResult
             quote={quote}
+            cinema={selectedCinema}
             isLoading={isLoadingQuote}
             error={quoteError}
-            venueName={selectedCinema?.name}
-            groupSize={groupSize}
+            groupSize={debouncedGroupSize}
           />
         </div>
       </div>
 
-      {/* Register Cinema Drawer */}
+      {/* Add Cinema Drawer */}
       <CinemaDrawer
         isOpen={isDrawerOpen}
         onClose={() => setIsDrawerOpen(false)}

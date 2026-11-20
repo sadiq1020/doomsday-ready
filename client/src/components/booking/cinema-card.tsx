@@ -1,8 +1,7 @@
 "use client";
 
-import { Building2, Check } from "lucide-react";
+import { Building2, Check, Ticket } from "lucide-react";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { Chip } from "@/components/ui/chip";
 import type { Cinema } from "@/types/api";
 
 interface CinemaCardProps {
@@ -16,19 +15,19 @@ export function CinemaCard({ cinema, isSelected, onSelect }: CinemaCardProps) {
     <SpotlightCard
       onClick={() => onSelect(cinema)}
       withTicks={isSelected}
-      className={`p-5 transition-all duration-300 cursor-pointer text-left ${
+      className={`p-5 transition-all duration-300 cursor-pointer text-left select-none ${
         isSelected
-          ? "border-brass bg-ink-3/80 shadow-[0_0_20px_rgba(201,162,75,0.15)] ring-1 ring-brass/50"
-          : "border-brass/20 bg-ink-2 hover:border-brass/40 hover:bg-ink-3/40"
+          ? "border-brass bg-ink-3 shadow-[0_0_25px_rgba(201,162,75,0.2)] ring-1 ring-brass/60"
+          : "border-brass/20 bg-ink-2 hover:border-brass/50 hover:bg-ink-3/40"
       }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div className="space-y-1">
           <div className="flex items-center gap-2 text-paper-dim">
             <Building2 className="w-3.5 h-3.5 text-brass" />
-            <span className="label-mono">VENUE PARTNER</span>
+            <span className="label-mono">HOST VENUE</span>
           </div>
-          <h3 className="font-display text-lg text-paper">{cinema.name}</h3>
+          <h3 className="font-display text-xl text-paper">{cinema.name}</h3>
         </div>
 
         <div
@@ -42,23 +41,32 @@ export function CinemaCard({ cinema, isSelected, onSelect }: CinemaCardProps) {
         </div>
       </div>
 
+      {/* Ticket-shaped bundle size chips */}
       <div className="mt-4 pt-3 border-t border-brass/15 space-y-2">
-        <span className="text-[11px] font-mono text-paper-dim uppercase tracking-wider block">
-          OFFERED BUNDLE TIERS:
+        <span className="text-[10px] font-mono text-paper-dim uppercase tracking-wider block">
+          OFFERED BUNDLE SIZES:
         </span>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-2">
           {cinema.bundleSizes.map((size) => (
-            <Chip
+            <span
               key={size}
-              variant={isSelected ? "brass" : "default"}
-              size="sm"
+              className={`relative inline-flex items-center gap-1 px-3 py-1 text-xs font-mono rounded-[2px] border transition-colors ${
+                isSelected
+                  ? "bg-brass/20 text-brass-bright border-brass/50"
+                  : "bg-ink text-paper-dim border-brass/20"
+              }`}
             >
-              {size} {size === 1 ? "SEAT" : "SEATS"}
-            </Chip>
+              {/* Notched ticket left & right cutouts */}
+              <span className="absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-ink-2 border-r border-brass/30" />
+              <span className="absolute -right-1 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-ink-2 border-l border-brass/30" />
+              <Ticket className="w-3 h-3 text-brass/70 shrink-0" />
+              <span>
+                {size} {size === 1 ? "seat" : "seats"}
+              </span>
+            </span>
           ))}
         </div>
       </div>
     </SpotlightCard>
   );
 }
-

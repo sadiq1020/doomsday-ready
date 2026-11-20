@@ -28,8 +28,8 @@ export function PlanEmpty({
             No Mission Target Specified
           </h3>
           <p className="font-body text-xs text-paper-dim leading-relaxed">
-            Select a target feature from the registry above to compute its full
-            preparatory screening chain in topological dependency order.
+            Select a target feature from the registry dropdown to compute its complete
+            prerequisite rewatch order.
           </p>
         </div>
       </SpotlightCard>
@@ -38,23 +38,22 @@ export function PlanEmpty({
 
   if (type === "no-prerequisites") {
     return (
-      <SpotlightCard withTicks className="p-8 sm:p-12 text-center space-y-4">
-        <div className="w-12 h-12 rounded-[3px] bg-verdigris/10 border border-verdigris/25 mx-auto flex items-center justify-center text-verdigris">
+      <SpotlightCard withTicks className="p-8 sm:p-12 text-center space-y-4 border-brass/30">
+        <div className="w-12 h-12 rounded-[3px] bg-brass/10 border border-brass/25 mx-auto flex items-center justify-center text-brass">
           <Film className="w-6 h-6 stroke-[1.5]" />
         </div>
-        <div className="space-y-1.5 max-w-md mx-auto">
-          <h3 className="font-display text-xl text-paper">
-            Zero Prerequisites Required
+        <div className="space-y-2 max-w-md mx-auto">
+          <h3 className="font-display text-2xl text-paper">
+            Nothing to rewatch. This one stands alone.
           </h3>
           <p className="font-body text-xs text-paper-dim leading-relaxed">
             {targetTitle ? (
               <>
-                <strong className="text-paper">{targetTitle}</strong> stands as an
-                introductory feature with no prior prerequisite viewings in the
-                registry. You are cleared to watch directly.
+                <strong className="text-paper">{targetTitle}</strong> has no prerequisite
+                dependencies in the intelligence archive. You are cleared to watch directly.
               </>
             ) : (
-              "This feature has no upstream prerequisite dependencies in the intelligence archive."
+              "This feature has no upstream prerequisite dependencies in the registry."
             )}
           </p>
         </div>
@@ -77,10 +76,9 @@ export function PlanEmpty({
       </div>
       {onRetry && (
         <Button variant="outline" size="sm" onClick={onRetry}>
-          Re-evaluate Sequence
+          Retry Calculation
         </Button>
       )}
     </SpotlightCard>
   );
 }
-

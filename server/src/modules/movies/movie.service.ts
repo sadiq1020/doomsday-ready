@@ -164,112 +164,110 @@ export async function getAllMovies() {
  * Partially updates an existing movie inside a transaction.
  */
 export async function updateMovie(id: string, input: UpdateMovieInput) {
-  return await prisma.$transaction(async (tx) => {
-    // 1. Verify movie exists
-    const existing = await tx.movie.findUnique({
-      where: { id },
-      select: { id: true, title: true },
-    });
-    if (!existing) {
-      throw new AppError(404, "NOT_FOUND", `Movie with ID "${id}" not found`);
-    }
+  // 1. Verify movie exists
+  const existing = await prisma.movie.findUnique({
+    where: { id },
+    select: { id: true, title: true },
+  });
+  if (!existing) {
+    throw new AppError(404, "NOT_FOUND", `Movie with ID "${id}" not found`);
+  }
 
-    // 2. Validate title uniqueness if changing title
-    if (input.title !== undefined) {
-      const duplicate = await tx.movie.findFirst({
-        where: {
-          title: { equals: input.title, mode: "insensitive" },
-          NOT: { id },
-        },
-      });
-      if (duplicate) {
-        throw new AppError(
-          409,
-          "DUPLICATE_TITLE",
-          `A movie with title "${input.title}" already exists`
-        );
-      }
-    }
-
-    // 3. Validate prerequisites & circular dependencies if prerequisiteIds provided
-    let prerequisiteUpdate: any = undefined;
-    if (input.prerequisiteIds !== undefined) {
-      const uniquePrereqs = [...new Set(input.prerequisiteIds)];
-
-      // A movie cannot list itself as a prerequisite
-      if (uniquePrereqs.includes(id)) {
-        throw new AppError(
-          409,
-          "CIRCULAR_DEPENDENCY",
-          "A movie cannot list itself as a prerequisite"
-        );
-      }
-
-      // Check that all prerequisite IDs exist
-      if (uniquePrereqs.length > 0) {
-        const found = await tx.movie.findMany({
-          where: { id: { in: uniquePrereqs } },
-          select: { id: true },
-        });
-        if (found.length !== uniquePrereqs.length) {
-          const foundIds = new Set(found.map((m) => m.id));
-          const missing = uniquePrereqs.filter((pid) => !foundIds.has(pid));
-          throw new AppError(
-            400,
-            "INVALID_PREREQUISITE",
-            `Prerequisite movie ID(s) not found: ${missing.join(", ")}`
-          );
-        }
-      }
-
-      // Load all movie -> prerequisite links in one query to check for cycles
-      const allLinks = await tx.movie.findMany({
-        select: {
-          id: true,
-          prerequisites: { select: { id: true } },
-        },
-      });
-
-      const edges = new Map<string, string[]>();
-      for (const item of allLinks) {
-        edges.set(
-          item.id,
-          item.prerequisites.map((p) => p.id)
-        );
-      }
-
-      // Check if updating prerequisites creates any circular dependency
-      if (wouldCreateCycle(id, uniquePrereqs, edges)) {
-        throw new AppError(
-          409,
-          "CIRCULAR_DEPENDENCY",
-          "Adding these prerequisites would create a circular dependency cycle"
-        );
-      }
-
-      // Replace the full prerequisite list
-      prerequisiteUpdate = {
-        set: uniquePrereqs.map((pid) => ({ id: pid })),
-      };
-    }
-
-    // 4. Update the movie record
-    const updated = await tx.movie.update({
-      where: { id },
-      data: {
-        ...(input.title !== undefined && { title: input.title }),
-        ...(input.releaseYear !== undefined && { releaseYear: input.releaseYear }),
-        ...(input.runtime !== undefined && { runtime: input.runtime }),
-        ...(input.watched !== undefined && { watched: input.watched }),
-        ...(prerequisiteUpdate !== undefined && {
-          prerequisites: prerequisiteUpdate,
-        }),
+  // 2. Validate title uniqueness if changing title
+  if (input.title !== undefined) {
+    const duplicate = await prisma.movie.findFirst({
+      where: {
+        title: { equals: input.title, mode: "insensitive" },
+        NOT: { id },
       },
-      select: movieSelect,
+    });
+    if (duplicate) {
+      throw new AppError(
+        409,
+        "DUPLICATE_TITLE",
+        `A movie with title "${input.title}" already exists`
+      );
+    }
+  }
+
+  // 3. Validate prerequisites & circular dependencies if prerequisiteIds provided
+  let prerequisiteUpdate: any = undefined;
+  if (input.prerequisiteIds !== undefined) {
+    const uniquePrereqs = [...new Set(input.prerequisiteIds)];
+
+    // A movie cannot list itself as a prerequisite
+    if (uniquePrereqs.includes(id)) {
+      throw new AppError(
+        409,
+        "CIRCULAR_DEPENDENCY",
+        "A movie cannot list itself as a prerequisite"
+      );
+    }
+
+    // Check that all prerequisite IDs exist
+    if (uniquePrereqs.length > 0) {
+      const found = await prisma.movie.findMany({
+        where: { id: { in: uniquePrereqs } },
+        select: { id: true },
+      });
+      if (found.length !== uniquePrereqs.length) {
+        const foundIds = new Set(found.map((m) => m.id));
+        const missing = uniquePrereqs.filter((pid) => !foundIds.has(pid));
+        throw new AppError(
+          400,
+          "INVALID_PREREQUISITE",
+          `Prerequisite movie ID(s) not found: ${missing.join(", ")}`
+        );
+      }
+    }
+
+    // Load all movie -> prerequisite links in one query to check for cycles
+    const allLinks = await prisma.movie.findMany({
+      select: {
+        id: true,
+        prerequisites: { select: { id: true } },
+      },
     });
 
-    return updated;
-  }, TX_OPTIONS);
+    const edges = new Map<string, string[]>();
+    for (const item of allLinks) {
+      edges.set(
+        item.id,
+        item.prerequisites.map((p) => p.id)
+      );
+    }
+
+    // Check if updating prerequisites creates any circular dependency
+    if (wouldCreateCycle(id, uniquePrereqs, edges)) {
+      throw new AppError(
+        409,
+        "CIRCULAR_DEPENDENCY",
+        "Adding these prerequisites would create a circular dependency cycle"
+      );
+    }
+
+    // Replace the full prerequisite list
+    prerequisiteUpdate = {
+      set: uniquePrereqs.map((pid) => ({ id: pid })),
+    };
+  }
+
+  // 4. Update the movie record
+  const updated = await prisma.movie.update({
+    where: { id },
+    data: {
+      ...(input.title !== undefined && { title: input.title }),
+      ...(input.releaseYear !== undefined && { releaseYear: input.releaseYear }),
+      ...(input.runtime !== undefined && { runtime: input.runtime }),
+      ...(input.watched !== undefined && { watched: input.watched }),
+      ...(prerequisiteUpdate !== undefined && {
+        prerequisites: prerequisiteUpdate,
+      }),
+    },
+    select: movieSelect,
+  });
+
+  return updated;
 }
 
 /**

@@ -1,51 +1,138 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Plus, Building2, Ticket } from "lucide-react";
 import { ChapterHeader } from "@/components/chapter-header";
+import { Button } from "@/components/ui/button";
 import { SpotlightCard } from "@/components/ui/spotlight-card";
-import { Chip } from "@/components/ui/chip";
+import { useCinemas, useBookingQuote } from "@/hooks/use-cinemas";
+import { CinemaCard } from "@/components/booking/cinema-card";
+import { CinemaDrawer } from "@/components/booking/cinema-drawer";
+import { HeadcountControl } from "@/components/booking/headcount-control";
+import { QuoteResult } from "@/components/booking/quote-result";
 
 export default function BookingPage() {
+  const { data: cinemas = [], isLoading: isLoadingCinemas } = useCinemas();
+  const [selectedCinemaId, setSelectedCinemaId] = useState<string | null>(null);
+  const [groupSize, setGroupSize] = useState<number>(7);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Auto-select first cinema once cinemas are loaded
+  useEffect(() => {
+    if (!selectedCinemaId && cinemas.length > 0) {
+      setSelectedCinemaId(cinemas[0].id);
+    }
+  }, [cinemas, selectedCinemaId]);
+
+  const selectedCinema = cinemas.find((c) => c.id === selectedCinemaId) ?? null;
+
+  const {
+    data: quote,
+    isLoading: isLoadingQuote,
+    error: quoteError,
+  } = useBookingQuote(selectedCinemaId, groupSize);
+
   return (
-    <div>
+    <div className="space-y-10">
       <ChapterHeader
         chapter="03"
         label="Opening Night"
-        title="Squad Watch-Party Booking"
-        description="Calculate optimal seat bundle allocations across premier cinema partners to seat your squad with zero ticket waste."
+        title="Watch-Party Seat Allocation"
+        description="Compute optimal opening-night seat bundles across partner cinemas using dynamic programming. Ensures exact squad seating with zero ticket waste and minimal total bundles."
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <SpotlightCard withTicks className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="label-mono">OPTIMIZATION ALGORITHM</span>
-            <Chip variant="brass" size="sm">
-              DYNAMIC PROGRAMMING
-            </Chip>
-          </div>
-          <h3 className="font-display text-lg text-paper">
-            Minimum Bundle Allocation
-          </h3>
-          <p className="font-body text-xs text-paper-dim leading-relaxed">
-            Solved using bottom-up minimum coin change dynamic programming to guarantee
-            the absolute fewest bundles required to reach the exact headcount.
-          </p>
-        </SpotlightCard>
+      {/* Top action bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-brass/15 pb-4">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-4 h-4 text-brass" />
+          <span className="label-mono">
+            {isLoadingCinemas
+              ? "SCANNING VENUES..."
+              : `${cinemas.length} REGISTERED VENUE PARTNERS`}
+          </span>
+        </div>
 
-        <SpotlightCard withTicks className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="label-mono">VENUE DIRECTORY</span>
-            <Chip variant="verdigris" size="sm">
-              ACTIVE VENUES
-            </Chip>
-          </div>
-          <h3 className="font-display text-lg text-paper">
-            Partner Cinema Seating
-          </h3>
-          <p className="font-body text-xs text-paper-dim leading-relaxed">
-            Select among registered cinema complexes including Starlight Cineplex, Galaxy
-            Hall, and Vibranium Screens, each offering distinct opening-night bundle tiers.
-          </p>
-        </SpotlightCard>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsDrawerOpen(true)}
+          className="inline-flex items-center gap-1.5 self-start sm:self-auto"
+        >
+          <Plus className="w-4 h-4 text-brass" />
+          <span>Register Venue</span>
+        </Button>
       </div>
+
+      {/* Venue Selection Grid */}
+      <div className="space-y-3">
+        <span className="label-mono">STEP 01: SELECT HOST CINEMA</span>
+
+        {isLoadingCinemas ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="h-32 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
+            <div className="h-32 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
+            <div className="h-32 bg-ink-2/60 border border-brass/15 rounded-[3px] animate-pulse" />
+          </div>
+        ) : cinemas.length === 0 ? (
+          <SpotlightCard withTicks className="p-8 text-center space-y-3">
+            <p className="font-body text-sm text-paper-dim">
+              No cinema partners currently registered in the database.
+            </p>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setIsDrawerOpen(true)}
+            >
+              Register First Cinema
+            </Button>
+          </SpotlightCard>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {cinemas.map((cinema) => (
+              <CinemaCard
+                key={cinema.id}
+                cinema={cinema}
+                isSelected={cinema.id === selectedCinemaId}
+                onSelect={(c) => setSelectedCinemaId(c.id)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Headcount Control & Quote Results Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Column: Headcount selector */}
+        <div className="lg:col-span-5 space-y-3">
+          <span className="label-mono">STEP 02: SPECIFY SQUAD HEADCOUNT</span>
+          <HeadcountControl
+            value={groupSize}
+            onChange={(val) => setGroupSize(val)}
+            min={1}
+            max={10000}
+          />
+        </div>
+
+        {/* Right Column: Allocation Output */}
+        <div className="lg:col-span-7 space-y-3">
+          <span className="label-mono">
+            STEP 03: DYNAMIC PROGRAMMING ALLOCATION
+          </span>
+          <QuoteResult
+            quote={quote}
+            isLoading={isLoadingQuote}
+            error={quoteError}
+            venueName={selectedCinema?.name}
+            groupSize={groupSize}
+          />
+        </div>
+      </div>
+
+      {/* Register Cinema Drawer */}
+      <CinemaDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+      />
     </div>
   );
 }
-

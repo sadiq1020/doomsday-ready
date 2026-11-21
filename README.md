@@ -8,13 +8,22 @@ Doomsday Ready is a full-stack application built to help Marvel Cinematic Univer
 
 - Server: Node.js (v20+), Express (v5), TypeScript, Prisma 7, PostgreSQL, Zod
 - Containerization: Docker, Docker Compose
-- Client: Coming soon (React application)
+- Client: Next.js 16 (App Router), TypeScript, Tailwind CSS v4, Motion (`motion/react`), TanStack React Query, Lucide Icons (classified "Doom Dossier" design system)
 
 ## 3. Project Structure
 
 ```
 doomsday-ready/
-├── client/                 # Frontend React client (coming soon)
+├── client/                 # Frontend Next.js 16 App Router application
+│   ├── src/
+│   │   ├── app/            # App Router pages (/, /movies, /plan, /booking)
+│   │   ├── components/     # UI kit & chapter components (movies, plan, booking)
+│   │   ├── hooks/          # TanStack Query custom hooks (useMovies, useCinemas, etc.)
+│   │   ├── lib/            # Typed API client, error handler, formatters
+│   │   └── types/          # Shared frontend API type contracts
+│   ├── DESIGN.md           # "The Doom Dossier" aesthetic design specification
+│   ├── Dockerfile          # Multi-stage standalone production Next.js build
+│   └── package.json        # Client dependencies and build scripts
 ├── server/                 # Backend Express API and Prisma database layer
 │   ├── prisma/             # Prisma schema, migrations, and seed script
 │   │   ├── migrations/     # Database migration history
@@ -35,7 +44,7 @@ doomsday-ready/
 │   ├── package.json        # Server dependencies and lifecycle scripts
 │   ├── prisma.config.ts    # Prisma 7 configuration file
 │   └── tsconfig.json       # TypeScript compiler configuration
-├── docker-compose.yml      # Orchestration for PostgreSQL and server containers
+├── docker-compose.yml      # Orchestration for PostgreSQL, server, and client
 ├── .env.example            # Environment variable template
 ├── .gitignore              # Repository file exclusion patterns
 └── README.md               # Project documentation
@@ -50,29 +59,59 @@ doomsday-ready/
    cp .env.example .env
    ```
 
-2. Start the services:
+2. Start all services (Database, Express Server, and Next.js Client):
    ```bash
    docker compose up --build
    ```
 
-3. Access the endpoints:
-   - Health check: `http://localhost:5000/api/health`
+3. Access the application and endpoints:
+   - Web Client: `http://localhost:3000`
+   - Server Health check: `http://localhost:5000/api/health`
    - Movies API: `http://localhost:5000/api/movies`
    - Cinemas API: `http://localhost:5000/api/cinemas`
 
-On startup, Docker Compose starts the PostgreSQL container, waits for the health check to pass, runs `prisma migrate deploy`, executes the idempotent seed script, and launches the Express server on port 5000.
+On startup, Docker Compose starts the PostgreSQL container, waits for the health check to pass, runs `prisma migrate deploy`, executes the idempotent seed script, launches the Express API server on port 5000, and serves the optimized standalone Next.js frontend on port 3000.
 
 ### Running Locally
 
+#### 1. Backend Server
 1. Navigate to the server directory:
    ```bash
    cd server
    ```
-
 2. Install dependencies:
    ```bash
    npm install
    ```
+3. Set up the local `.env` file (refer to `.env.example`).
+4. Apply Prisma migrations and seed the database:
+   ```bash
+   npx prisma migrate dev
+   npx tsx prisma/seed.ts
+   ```
+5. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+#### 2. Frontend Client
+1. Navigate to the client directory:
+   ```bash
+   cd client
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Set up `client/.env.local`:
+   ```bash
+   NEXT_PUBLIC_API_URL=http://localhost:5000/api
+   ```
+4. Start the Next.js development server:
+   ```bash
+   npm run dev
+   ```
+5. Open `http://localhost:3000` in your browser.
 
 3. Configure environment variables:
    Create a `.env` file inside `server/` with your database credentials:

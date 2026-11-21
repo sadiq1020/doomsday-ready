@@ -38,59 +38,86 @@ const CINEMAS = [
 
 // ─── Seed function ────────────────────────────────────────────────────────────
 async function main() {
-  console.log("🌱 Seeding database...\n");
+  console.log("🌱 Checking database seed state...\n");
 
-  // ── Pass 1: Upsert all movies WITHOUT prerequisites ──────────────────────
-  // This ensures every movie exists before we try to link prerequisites.
-  // Safe to run many times: upsert matches on the unique `title` field.
-  console.log("📽️  Upserting movies (pass 1 — data only)...");
+  // Track movies created during this run so we only link prerequisites for newly created records.
+  // Existing movies are never modified, preserving user-edited watched states, runtimes, and prerequisites.
+  const newlyCreatedTitles = new Set<string>();
+
+  // ── Pass 1: Create MISSING movies only (never overwrite existing) ──────────
+  console.log("📽️  Verifying movies (creating missing only)...");
   for (const movie of MOVIES) {
-    await prisma.movie.upsert({
-      where:  { title: movie.title },
-      create: { title: movie.title, releaseYear: movie.releaseYear, runtime: movie.runtime },
-      update: { releaseYear: movie.releaseYear, runtime: movie.runtime },
-    });
-    console.log(`  ✓ ${movie.title}`);
-  }
-
-  // ── Pass 2: Set prerequisites now that all movies exist ──────────────────
-  // Using `prerequisites: { set: [...] }` replaces the full list every run,
-  // making this fully idempotent.
-  console.log("\n🔗 Setting prerequisites (pass 2)...");
-  for (const movie of MOVIES) {
-    if (movie.prereqs.length === 0) continue;
-
-    // Look up each prerequisite movie by its unique title to get its id
-    const prereqMovies = await prisma.movie.findMany({
-      where: { title: { in: movie.prereqs } },
-      select: { id: true, title: true },
+    const existing = await prisma.movie.findFirst({
+      where: { title: { equals: movie.title, mode: "insensitive" } },
+      select: { id: true, title: true, watched: true },
     });
 
-    await prisma.movie.update({
-      where: { title: movie.title },
-      data: {
-        prerequisites: {
-          set: prereqMovies.map((m) => ({ id: m.id })),
+    if (!existing) {
+      await prisma.movie.create({
+        data: {
+          title: movie.title,
+          releaseYear: movie.releaseYear,
+          runtime: movie.runtime,
+          watched: false,
         },
-      },
-    });
-    console.log(`  ✓ ${movie.title} → [${movie.prereqs.join(", ")}]`);
+      });
+      newlyCreatedTitles.add(movie.title.toLowerCase());
+      console.log(`  + Created missing movie: "${movie.title}"`);
+    } else {
+      console.log(`  = Preserved existing movie: "${existing.title}" (watched: ${existing.watched})`);
+    }
   }
 
-  // ── Seed cinemas ─────────────────────────────────────────────────────────
-  // Upsert by unique `name`. bundleSizes stored sorted ascending.
-  console.log("\n🎬 Upserting cinemas...");
+  // ── Pass 2: Link prerequisites ONLY for newly created movies ─────────────
+  if (newlyCreatedTitles.size > 0) {
+    console.log("\n🔗 Linking prerequisites for newly created movies...");
+    for (const movie of MOVIES) {
+      if (!newlyCreatedTitles.has(movie.title.toLowerCase())) {
+        continue;
+      }
+      if (movie.prereqs.length === 0) continue;
+
+      const prereqMovies = await prisma.movie.findMany({
+        where: { title: { in: movie.prereqs } },
+        select: { id: true, title: true },
+      });
+
+      if (prereqMovies.length > 0) {
+        await prisma.movie.update({
+          where: { title: movie.title },
+          data: {
+            prerequisites: {
+              connect: prereqMovies.map((m) => ({ id: m.id })),
+            },
+          },
+        });
+        console.log(`  ✓ Linked ${movie.title} → [${movie.prereqs.join(", ")}]`);
+      }
+    }
+  } else {
+    console.log("\n🔗 No newly created movies — prerequisite relationships preserved as-is.");
+  }
+
+  // ── Pass 3: Create MISSING cinemas only (never overwrite existing) ────────
+  console.log("\n🎬 Verifying cinemas (creating missing only)...");
   for (const cinema of CINEMAS) {
-    const sorted = [...cinema.bundleSizes].sort((a, b) => a - b);
-    await prisma.cinema.upsert({
-      where:  { name: cinema.name },
-      create: { name: cinema.name, bundleSizes: sorted },
-      update: { bundleSizes: sorted },
+    const existing = await prisma.cinema.findFirst({
+      where: { name: { equals: cinema.name, mode: "insensitive" } },
+      select: { id: true, name: true, bundleSizes: true },
     });
-    console.log(`  ✓ ${cinema.name} — bundles: [${sorted.join(", ")}]`);
+
+    if (!existing) {
+      const sorted = [...cinema.bundleSizes].sort((a, b) => a - b);
+      await prisma.cinema.create({
+        data: { name: cinema.name, bundleSizes: sorted },
+      });
+      console.log(`  + Created missing cinema: "${cinema.name}" [${sorted.join(", ")}]`);
+    } else {
+      console.log(`  = Preserved existing cinema: "${existing.name}" [${existing.bundleSizes.join(", ")}]`);
+    }
   }
 
-  console.log("\n✅ Seed complete!");
+  console.log("\n✅ Seed safety check complete!");
 }
 
 main()

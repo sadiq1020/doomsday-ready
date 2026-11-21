@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import { env } from "./config/env.js";
 import { notFound } from "./middleware/not-found.js";
 import { errorHandler } from "./middleware/error-handler.js";
 import { healthRouter } from "./modules/health/health.route.js";
@@ -12,8 +13,26 @@ const app = express();
 // Secure HTTP response headers
 app.use(helmet());
 
-// Cross-Origin Resource Sharing
-app.use(cors());
+// Cross-Origin Resource Sharing with CLIENT_ORIGIN whitelist
+const allowedOrigins = env.CLIENT_ORIGIN.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests without Origin header (e.g. server-to-server, curl, Postman, health checks)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(
+        new Error(`CORS blocked: origin ${origin} is not allowed by CLIENT_ORIGIN policy`)
+      );
+    },
+    credentials: true,
+  })
+);
 
 // Body parsing middlewares
 app.use(express.json());
